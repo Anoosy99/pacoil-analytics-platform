@@ -85,3 +85,25 @@ python -m pytest -q
 Tests cover unauthorised access, role isolation in dashboards/exports, owner-only controls, stale-data detection, recovery, deduplication, invalid values and logout.
 
 GitHub stores and tests the source code. GitHub Pages cannot run this Python backend. No production site is deployed by this repository.
+
+
+## Version 2: management pages
+
+Navigation now includes Overview, Plants, Plant details, Equipment details, Supply chain, Data monitoring, Reports and owner-only Administration. Pages use URL hashes so links can be bookmarked without additional server routing.
+
+Plant 1 is an illustrative grouping of the existing demo equipment. Plants 2 and 3 are explicitly planned placeholders, not verified company plant names. Production, utilities, quality, orders and delivery modules remain planned until their data is defined.
+
+To explore: Owner → Plants → Plant 1 → Filter 1 → Pause simulated updates. After 15 seconds, return to Overview and follow the warning back to the source history. Resume on the equipment page. Historical gaps are left unconnected on the time chart.
+
+Reports allow source and local-time date filters, enforce role permissions on the server and provide matching CSV downloads. Preview limit: 500 records; export limit: 10,000. Demo administration explains access and connections; it does not yet implement individual user or connector editing.
+
+### Update an existing Codespace
+
+Stop the running server with Ctrl+C, then:
+
+```bash
+git pull --ff-only origin main
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Keep the terminal running and hard-refresh the browser. Existing demo readings remain in the database.

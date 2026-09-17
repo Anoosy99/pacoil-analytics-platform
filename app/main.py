@@ -111,12 +111,17 @@ def pause(source:str,body:Pause,role=Depends(user)):
     paused.add(source) if body.paused else paused.discard(source)
     return {'source':source,'paused':source in paused}
 @app.get('/api/export')
-def export(role=Depends(user)):
+def export(source: str | None = None, start: int | None = None, end: int | None = None, role=Depends(user)):
     buf=io.StringIO(); writer=csv.writer(buf)
     writer.writerow(['source','timestamp_utc_epoch','value','unit','simulated'])
     with Session() as db:
         permitted=[s for s in SOURCES if allowed(role,s)]
-        for r in db.scalars(select(Reading).where(Reading.source.in_(permitted)).order_by(Reading.timestamp.desc()).limit(10000)):
+        if source and source not in permitted: raise HTTPException(403, 'Source unavailable for this role')
+        if start is not None and end is not None and start > end: raise HTTPException(422, 'Start must precede end')
+        query = select(Reading).where(Reading.source.in_([source] if source else permitted))
+        if start is not None: query = query.where(Reading.timestamp >= start)
+        if end is not None: query = query.where(Reading.timestamp <= end)
+        for r in db.scalars(query.order_by(Reading.timestamp.desc()).limit(10000)):
             writer.writerow([r.source,r.timestamp,r.value,SOURCES[r.source][2],'true'])
     return StreamingResponse(iter([buf.getvalue()]),media_type='text/csv',headers={'Content-Disposition':'attachment; filename="pacoil-demo.csv"'})
 @app.get('/health')
@@ -125,3 +130,16 @@ def health():
     return {'status':'ok','mode':'simulated'}
 @app.get('/')
 def index(): return FileResponse(ROOT/'static'/'index.html')
+
+@app.get('/api/records')
+def records(source: str, start: int | None = None, end: int | None = None, role=Depends(user)):
+    if source not in SOURCES or not allowed(role, source):
+        raise HTTPException(403, 'Source unavailable for this role')
+    if start is not None and end is not None and start > end:
+        raise HTTPException(422, 'Start must precede end')
+    query = select(Reading).where(Reading.source == source)
+    if start is not None: query = query.where(Reading.timestamp >= start)
+    if end is not None: query = query.where(Reading.timestamp <= end)
+    with Session() as db:
+        rows = db.scalars(query.order_by(Reading.timestamp.desc()).limit(501)).all()
+        return {'source': source, 'unit': SOURCES[source][2], 'limited': len(rows)>500, 'records': [{'timestamp':r.timestamp,'value':r.value} for r in rows[:500]]}
