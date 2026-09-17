@@ -1,0 +1,8 @@
+{
+  "name": "PACOIL Analytics Demo",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+  "postCreateCommand": "pip install -r requirements-dev.txt",
+  "forwardPorts": [8000],
+  "portsAttributes": {"8000": {"label": "PACOIL Demo", "onAutoForward": "openBrowser"}},
+  "postStartCommand": "bash -c 'nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/pacoil-demo.log 2>&1 &'"
+}
